@@ -2,670 +2,645 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FANUC Series 0i-MF Plus 擬真模擬器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FANUC 0i-MF Plus Mobile CNC</title>
     <style>
         :root {
-            --panel-bg: #2d3036;
-            --panel-border: #1a1c20;
-            --screen-bg: #000814;
-            --screen-green: #00ff66;
-            --screen-yellow: #ffff00;
-            --screen-white: #ffffff;
-            --screen-cyan: #00e5ff;
-            --btn-bg: #3a3d45;
-            --btn-active: #5c616e;
-            --btn-border: #18191c;
+            --bg-color: #121316;
+            --panel-bg: #22252b;
+            --panel-border: #141518;
+            --lcd-bg: #000c18;
+            --lcd-green: #00ff66;
+            --lcd-yellow: #ffff00;
+            --lcd-cyan: #00e5ff;
+            --btn-dark: #32363e;
+            --btn-blue: #224466;
+            --btn-orange: #b35900;
+            --btn-green: #1b5e20;
+            --btn-red: #b71c1c;
         }
 
-        * { box-sizing: border-box; user-select: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        
         body {
-            background-color: #121212;
+            background-color: var(--bg-color);
             color: #fff;
-            font-family: 'Consolas', 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Consolas', 'Courier New', monospace;
+            margin: 0;
+            padding: 8px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
         }
 
-        /* 控制主面板外殼 */
-        .fanuc-cnc {
-            width: 980px;
+        /* 手機直立式主容器 */
+        .cnc-mobile-app {
+            width: 100%;
+            max-width: 480px;
             background: var(--panel-bg);
-            border: 4px solid var(--panel-border);
-            border-radius: 6px;
-            padding: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            border: 2px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.9);
         }
 
-        /* --- 上半部：螢幕 + 12Softkeys + MDI 鍵盤 --- */
-        .upper-section {
-            display: grid;
-            grid-template-columns: 580px 1fr;
-            gap: 15px;
-        }
-
-        /* 螢幕主體 */
-        .screen-unit {
-            background: var(--screen-bg);
-            border: 3px solid #444;
+        /* --- 1. LCD 螢幕區 (含動態 Softkey 列) --- */
+        .lcd-display {
+            background-color: var(--lcd-bg);
+            border: 2px solid #333;
             border-radius: 4px;
-            padding: 10px;
+            height: 280px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 420px;
+            padding: 6px;
+            position: relative;
         }
 
-        .screen-header {
+        .lcd-header {
             display: flex;
             justify-content: space-between;
-            color: var(--screen-yellow);
-            font-size: 14px;
+            color: var(--lcd-yellow);
+            font-size: 11px;
             font-weight: bold;
-            border-bottom: 1px dashed #333;
-            padding-bottom: 4px;
+            border-bottom: 1px dashed #224433;
+            padding-bottom: 3px;
         }
 
-        .screen-body {
+        .lcd-content {
             flex: 1;
-            padding: 10px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            overflow: hidden;
+            padding: 6px 0;
+            overflow-y: auto;
+            font-size: 13px;
         }
 
-        /* 座標螢幕畫面 */
+        /* 座標顯示格 */
         .pos-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            height: 100%;
+            gap: 8px;
         }
 
-        .pos-block h4 {
-            margin: 0 0 5px 0;
-            color: #aaa;
-            font-size: 13px;
-            border-bottom: 1px solid #222;
-        }
+        .pos-title { color: #888; font-size: 11px; border-bottom: 1px solid #222; margin-bottom: 2px; }
+        .pos-row { display: flex; justify-content: space-between; margin: 2px 0; font-weight: bold; }
+        .pos-axis { color: var(--lcd-cyan); }
+        .pos-val { color: var(--lcd-green); }
 
-        .pos-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 18px;
-            margin: 4px 0;
-        }
-
-        .pos-label { color: var(--screen-cyan); font-weight: bold; }
-        .pos-val { color: var(--screen-green); font-weight: bold; }
-
-        .modal-codes {
-            font-size: 11px;
-            color: #888;
-            margin-top: 10px;
-            line-height: 1.4;
-        }
-
-        /* 畫面底部 Command/Buffer 輸入列 */
-        .screen-input-line {
-            height: 24px;
-            background: #001224;
-            border-top: 1px solid #222;
-            color: var(--screen-yellow);
+        /* MDI 輸入緩衝列 */
+        .lcd-buffer {
+            height: 20px;
+            background: #00182b;
+            color: var(--lcd-yellow);
+            font-size: 12px;
             display: flex;
             align-items: center;
-            padding: 0 8px;
-            font-size: 14px;
+            padding: 0 4px;
+            border-top: 1px solid #113344;
         }
 
-        /* 面板正下方 12 顆黑鍵 (Softkeys) */
-        .softkeys-row {
+        /* LCD 底部動態選單列 (12 Slots) */
+        .lcd-softkey-bar {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            gap: 3px;
-            margin-top: 5px;
+            gap: 1px;
+            background: #111;
+            border-top: 1px solid #444;
+            height: 22px;
         }
 
-        .softkey-btn {
-            height: 28px;
-            background: #202226;
-            border: 1px solid #555;
-            color: #ccc;
-            font-size: 10px;
-            cursor: pointer;
-            border-radius: 2px;
+        .lcd-sk-label {
+            background: #0d2233;
+            color: #fff;
+            font-size: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
+            border-right: 1px solid #000;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
-        .softkey-btn:active { background: #444; color: #fff; }
+        /* --- 2. 面板下 12 顆實體小黑鍵 (純黑色 無印刷) --- */
+        .physical-softkeys {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 3px;
+        }
 
-        /* MDI 右側按鍵區 */
-        .mdi-panel {
-            background: #22252a;
-            border: 2px solid #111;
-            padding: 10px;
+        .sk-black-btn {
+            height: 32px;
+            background: #1a1c20;
+            border: 1px solid #444;
+            border-bottom: 2px solid #000;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .sk-black-btn:active {
+            background: #444;
+            transform: translateY(1px);
+        }
+
+        /* --- 3. MDI 實體功能與鍵盤區 --- */
+        .mdi-section {
+            background: #1a1c20;
+            border: 1px solid #333;
             border-radius: 4px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .mdi-grid {
+        .mdi-row {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 4px;
         }
 
-        .k-btn {
-            background: var(--btn-bg);
-            border: 1px solid var(--btn-border);
-            color: #fff;
+        .btn-mdi {
             height: 36px;
+            background: var(--btn-dark);
+            border: 1px solid #444;
+            color: #fff;
             font-size: 12px;
             font-weight: bold;
             border-radius: 3px;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+            cursor: pointer;
         }
 
-        .k-btn:active { background: var(--btn-active); transform: translateY(1px); }
-        .k-sys { background: #2f4050; color: #66ccff; }
-        .k-num { background: #3d434d; }
-        .k-edit { background: #4f3b2d; color: #ffaa55; }
-        .k-input { background: #1b5e20; color: #fff; }
+        .btn-mdi:active { opacity: 0.7; }
+        .btn-sys { background: var(--btn-blue); color: #80d4ff; }
+        .btn-edit { background: #4a3525; color: #ffb84d; }
+        .btn-exec { background: var(--btn-green); }
 
-        /* --- 下半部：機台操作面板 (Machine Operator Panel) --- */
-        .lower-section {
-            background: #22252a;
-            border: 2px solid #111;
-            padding: 12px;
+        /* --- 4. 機台操作面板 (MODE 轉鈕、JOG、Cycle) --- */
+        .mop-section {
+            background: #1a1c20;
+            border: 1px solid #333;
             border-radius: 4px;
-            display: grid;
-            grid-template-columns: 200px 1fr;
-            gap: 15px;
-        }
-
-        /* 啟動/急停與模式轉鈕 */
-        .mop-left {
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            border-right: 1px solid #333;
-            padding-right: 15px;
+            gap: 8px;
         }
 
-        .start-stop-group {
+        .mop-top {
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
             align-items: center;
         }
 
-        .circle-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            border: 2px solid #000;
-            font-weight: bold;
-            cursor: pointer;
+        /* MODE 旋轉鈕 */
+        .knob-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            text-align: center;
-        }
-
-        .btn-start { background: #00c853; color: #000; }
-        .btn-stop { background: #d50000; color: #fff; }
-        .btn-estop { width: 60px; height: 60px; background: #ff1744; border: 4px solid #ffea00; color: #fff; font-size: 11px; font-weight: bold; }
-
-        /* MODE 轉鈕 */
-        .knob-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            gap: 8px;
         }
 
         .knob-dial {
-            width: 70px;
-            height: 70px;
+            width: 48px;
+            height: 48px;
             background: #444;
+            border: 3px solid #777;
             border-radius: 50%;
-            border: 3px solid #888;
             position: relative;
             cursor: pointer;
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.2s ease;
         }
 
         .knob-pointer {
             position: absolute;
-            top: 6px;
-            left: 32px;
-            width: 6px;
-            height: 28px;
-            background: #ff3d00;
+            top: 4px;
+            left: 21px;
+            width: 4px;
+            height: 18px;
+            background: #ff3333;
             border-radius: 2px;
         }
 
-        /* 操作面板右側：數碼管、JOG 按鈕陣列、程式保護開關 */
-        .mop-right {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* 7 段數碼管 */
-        .digital-displays {
-            display: flex;
-            gap: 20px;
-            background: #111;
-            padding: 6px 12px;
-            border-radius: 4px;
-            width: fit-content;
-        }
-
-        .seven-seg {
-            color: #ff2200;
-            font-family: 'Courier New', monospace;
-            font-size: 20px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            background: #000;
-            padding: 2px 6px;
-            border: 1px solid #333;
-        }
-
+        /* JOG 按鈕區 */
         .jog-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
         }
 
-        .jog-btn {
-            height: 40px;
-            background: #333842;
+        .btn-jog {
+            height: 38px;
+            background: #2a2d34;
             border: 1px solid #555;
             color: #fff;
             font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .jog-btn:active { background: #0288d1; }
-        .jog-rapid { background: #e65100; }
-
-        .key-switch {
-            display: flex;
-            align-items: center;
-            gap: 10px;
             font-size: 12px;
-            color: #ffcc00;
+            border-radius: 3px;
+            cursor: pointer;
         }
 
-        textarea.editor-area {
+        .btn-jog:active { background: #0288d1; }
+        .btn-estop { background: var(--btn-red); border: 2px solid #ffeb3b; font-size: 10px; }
+        .btn-start { background: var(--btn-green); color: #fff; font-size: 10px; }
+
+        textarea.code-editor {
             width: 100%;
-            height: 100%;
+            height: 160px;
             background: transparent;
-            color: var(--screen-green);
+            color: var(--lcd-green);
             border: none;
             outline: none;
             font-family: inherit;
-            font-size: 15px;
+            font-size: 12px;
             resize: none;
         }
     </style>
 </head>
 <body>
 
-<div class="fanuc-cnc">
-    <!-- 上半部：螢幕與 MDI 操作區 -->
-    <div class="upper-section">
-        <!-- 螢幕區 -->
-        <div>
-            <div class="screen-unit">
-                <div class="screen-header">
-                    <span>FANUC Series 0i-MF Plus</span>
-                    <span id="screen-status-mode">MEM &nbsp; **** &nbsp; STMT</span>
-                    <span id="screen-prog-num">O0017 N00000</span>
-                </div>
-
-                <div class="screen-body">
-                    <!-- 1. POS 座標畫面 -->
-                    <div id="view-pos" class="pos-grid">
-                        <div class="pos-block">
-                            <h4>[相對座標 RELATIVE]</h4>
-                            <div class="pos-row"><span class="pos-label">X</span><span class="pos-val" id="val-rel-x">0.000</span></div>
-                            <div class="pos-row"><span class="pos-label">Y</span><span class="pos-val" id="val-rel-y">0.000</span></div>
-                            <div class="pos-row"><span class="pos-label">Z</span><span class="pos-val" id="val-rel-z">0.000</span></div>
-
-                            <h4 style="margin-top:15px;">[絕對座標 ABSOLUTE]</h4>
-                            <div class="pos-row"><span class="pos-label">X</span><span class="pos-val" id="val-abs-x">-120.412</span></div>
-                            <div class="pos-row"><span class="pos-label">Y</span><span class="pos-val" id="val-abs-y">235.198</span></div>
-                            <div class="pos-row"><span class="pos-label">Z</span><span class="pos-val" id="val-abs-z">-130.760</span></div>
-                        </div>
-
-                        <div class="pos-block">
-                            <h4>[機械座標 MACHINE]</h4>
-                            <div class="pos-row"><span class="pos-label">X</span><span class="pos-val" id="val-mach-x">200.410</span></div>
-                            <div class="pos-row"><span class="pos-label">Y</span><span class="pos-val" id="val-mach-y">0.750</span></div>
-                            <div class="pos-row"><span class="pos-label">Z</span><span class="pos-val" id="val-mach-z">-130.760</span></div>
-
-                            <div class="modal-codes">
-                                G01 G00 G17 G90 G21 G40 G49 G80<br>
-                                F: 0 mm/min &nbsp;&nbsp; S: 0 RPM<br>
-                                JOG F: 10000 mm/min
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. PROG 程式編輯/讀取畫面 -->
-                    <div id="view-prog" style="display:none; height:100%;">
-                        <div style="color:var(--screen-yellow); font-size:12px; margin-bottom:4px;">PROGRAM (EDIT / MEMORY)</div>
-                        <textarea id="nc-editor" class="editor-area" spellcheck="false">O0017;
-G90 G54 G00 X0 Y0 S1500 M03;
-G43 H01 Z50. M08;
-G01 Z-5. F150;
-X50. Y50.;
-G00 Z100. M09;
-M05;
-M30;</textarea>
-                    </div>
-
-                    <!-- 3. OFFSET 刀具補正畫面 -->
-                    <div id="view-offset" style="display:none; height:100%;">
-                        <div style="color:var(--screen-yellow); font-size:12px; margin-bottom:8px;">OFFSET / GEOMETRY (刀長與半徑補正)</div>
-                        <table style="width:100%; color:#fff; font-size:13px; text-align:left; border-collapse:collapse;">
-                            <tr style="border-bottom:1px solid #444; color:var(--screen-cyan);">
-                                <th>NO.</th><th>GEOM (H)</th><th>WEAR (H)</th><th>GEOM (D)</th>
-                            </tr>
-                            <tr><td>01</td><td><span id="h-offset">-150.250</span></td><td>0.000</td><td><span id="d-offset">10.000</span></td></tr>
-                            <tr><td>02</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
-                            <tr><td>03</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- MDI 輸入快取列 -->
-                <div class="screen-input-line">
-                    <span>&gt;&nbsp;</span><span id="input-buffer"></span>
-                </div>
-
-                <!-- 面板正下方 12Softkeys -->
-                <div class="softkeys-row">
-                    <button class="softkey-btn" onclick="triggerSoftkey(0)">ABS</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(1)">REL</button>
-
-                    <button class="softkey-btn" onclick="triggerSoftkey(2)">ALL</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(3)">[操縱]</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(4)">歸零</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(5)">新建</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(6)">讀取</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(7)">刀長</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(8)">半徑</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(9)">+</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(10)">-</button>
-                    <button class="softkey-btn" onclick="triggerSoftkey(11)"></button>
-                </div>
-            </div>
+<div class="cnc-mobile-app">
+    <!-- 1. LCD 螢幕顯示區 -->
+    <div class="lcd-display">
+        <div class="lcd-header">
+            <span>FANUC 0i-MF Plus</span>
+            <span id="lcd-mode-status">MEM &nbsp; **** &nbsp; STMT</span>
+            <span id="lcd-prog-id">O0001 N00000</span>
         </div>
 
-        <!-- MDI 鍵盤區 -->
-        <div class="mdi-panel">
-            <div class="mdi-grid">
-                <button class="k-btn k-sys" onclick="switchView('pos')">POS</button>
-                <button class="k-btn k-sys" onclick="switchView('prog')">PROG</button>
-                <button class="k-btn k-sys" onclick="switchView('offset')">OFFSET</button>
-                <button class="k-btn k-sys">SYSTEM</button>
-                <button class="k-btn k-sys">MESSAGE</button>
+        <div class="lcd-content" id="lcd-main-viewport">
+            <!-- 動態由 JavaScript 繪製內容 (POS, PROG, OFFSET 等) -->
+        </div>
 
-                <button class="k-btn k-num" onclick="pressKey('O')">O</button>
-                <button class="k-btn k-num" onclick="pressKey('N')">N</button>
-                <button class="k-btn k-num" onclick="pressKey('G')">G</button>
-                <button class="k-btn k-num" onclick="pressKey('7')">7</button>
-                <button class="k-btn k-num" onclick="pressKey('8')">8</button>
+        <!-- MDI 輸入快取列 -->
+        <div class="lcd-buffer">
+            <span>&gt;&nbsp;</span><span id="buf-text"></span>
+        </div>
 
-                <button class="k-btn k-num" onclick="pressKey('X')">X</button>
-                <button class="k-btn k-num" onclick="pressKey('Y')">Y</button>
-                <button class="k-btn k-num" onclick="pressKey('Z')">Z</button>
-                <button class="k-btn k-num" onclick="pressKey('4')">4</button>
-                <button class="k-btn k-num" onclick="pressKey('5')">5</button>
-
-                <button class="k-btn k-num" onclick="pressKey('M')">M</button>
-                <button class="k-btn k-num" onclick="pressKey('S')">S</button>
-                <button class="k-btn k-num" onclick="pressKey('T')">T</button>
-                <button class="k-btn k-num" onclick="pressKey('1')">1</button>
-                <button class="k-btn k-num" onclick="pressKey('2')">2</button>
-
-                <button class="k-btn k-num" onclick="pressKey('F')">F</button>
-                <button class="k-btn k-num" onclick="pressKey('H')">H</button>
-                <button class="k-btn k-num" onclick="pressKey('D')">D</button>
-                <button class="k-btn k-num" onclick="pressKey('0')">0</button>
-                <button class="k-btn k-num" onclick="pressKey('.')">.</button>
-
-                <button class="k-btn k-edit" onclick="pressKey('EOB')">EOB</button>
-                <button class="k-btn k-edit" onclick="pressKey('CAN')">CAN</button>
-                <button class="k-btn k-edit" onclick="pressKey('ALTER')">ALTER</button>
-                <button class="k-btn k-edit" onclick="pressKey('INSERT')">INSERT</button>
-                <button class="k-btn k-edit" onclick="pressKey('DELETE')">DELETE</button>
-            </div>
-            <div style="display:flex; gap:4px; margin-top: auto;">
-                <button class="k-btn k-input" style="width:100%;" onclick="pressInput()">INPUT</button>
-            </div>
+        <!-- LCD 畫面底部：12 個動態 Softkey 標籤格 -->
+        <div class="lcd-softkey-bar" id="softkey-bar">
+            <!-- 由 JS 動態生成文字 -->
         </div>
     </div>
 
-    <!-- 下半部：機台操作面板 (Machine Operator Panel) -->
-    <div class="lower-section">
-        <div class="mop-left">
-            <!-- 啟動與急停按鈕 -->
-            <div class="start-stop-group">
-                <button class="circle-btn btn-start" onclick="cycleStart()">CYCLE<br>START</button>
-                <button class="circle-btn btn-stop">CYCLE<br>STOP</button>
-                <button class="circle-btn btn-estop" onclick="eStop()">E-STOP<br>緊急停止</button>
-            </div>
+    <!-- 2. 面板正下方 12 顆實體小黑鍵 (無文字) -->
+    <div class="physical-softkeys">
+        <button class="sk-black-btn" onclick="pressSoftkey(0)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(1)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(2)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(3)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(4)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(5)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(6)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(7)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(8)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(9)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(10)"></button>
+        <button class="sk-black-btn" onclick="pressSoftkey(11)"></button>
+    </div>
 
-            <!-- MODE 模式轉鈕 -->
-            <div class="knob-box">
-                <div class="knob-dial" id="mode-knob" onclick="rotateMode()">
+    <!-- 3. MDI 實體按鍵區 -->
+    <div class="mdi-section">
+        <div class="mdi-row">
+            <button class="btn-mdi btn-sys" onclick="switchMainPage('POS')">POS</button>
+            <button class="btn-mdi btn-sys" onclick="switchMainPage('PROG')">PROG</button>
+            <button class="btn-mdi btn-sys" onclick="switchMainPage('OFFSET')">OFS/SET</button>
+            <button class="btn-mdi btn-sys" onclick="switchMainPage('SYSTEM')">SYSTEM</button>
+            <button class="btn-mdi btn-sys" onclick="switchMainPage('MSG')">MSG</button>
+        </div>
+        <div class="mdi-row">
+            <button class="btn-mdi" onclick="pressKey('O')">O</button>
+            <button class="btn-mdi" onclick="pressKey('N')">N</button>
+            <button class="btn-mdi" onclick="pressKey('G')">G</button>
+            <button class="btn-mdi" onclick="pressKey('7')">7</button>
+            <button class="btn-mdi" onclick="pressKey('8')">8</button>
+        </div>
+        <div class="mdi-row">
+            <button class="btn-mdi" onclick="pressKey('X')">X</button>
+            <button class="btn-mdi" onclick="pressKey('Y')">Y</button>
+            <button class="btn-mdi" onclick="pressKey('Z')">Z</button>
+            <button class="btn-mdi" onclick="pressKey('4')">4</button>
+            <button class="btn-mdi" onclick="pressKey('5')">5</button>
+        </div>
+        <div class="mdi-row">
+            <button class="btn-mdi" onclick="pressKey('M')">M</button>
+            <button class="btn-mdi" onclick="pressKey('S')">S</button>
+            <button class="btn-mdi" onclick="pressKey('T')">T</button>
+            <button class="btn-mdi" onclick="pressKey('1')">1</button>
+            <button class="btn-mdi" onclick="pressKey('2')">2</button>
+        </div>
+        <div class="mdi-row">
+            <button class="btn-mdi" onclick="pressKey('F')">F</button>
+            <button class="btn-mdi" onclick="pressKey('H')">H</button>
+            <button class="btn-mdi" onclick="pressKey('D')">D</button>
+            <button class="btn-mdi" onclick="pressKey('0')">0</button>
+            <button class="btn-mdi" onclick="pressKey('.')">.</button>
+        </div>
+        <div class="mdi-row">
+            <button class="btn-mdi btn-edit" onclick="pressKey('CAN')">CAN</button>
+            <button class="btn-mdi btn-edit" onclick="pressKey('EOB')">EOB</button>
+            <button class="btn-mdi btn-edit" onclick="pressKey('ALTER')">ALTER</button>
+            <button class="btn-mdi btn-edit" onclick="pressKey('INSERT')">INSERT</button>
+            <button class="btn-mdi btn-exec" onclick="pressInput()">INPUT</button>
+        </div>
+    </div>
+
+    <!-- 4. 機台操作面板 (Mode 轉鈕與 JOG 搬移) -->
+    <div class="mop-section">
+        <div class="mop-top">
+            <div class="knob-container">
+                <div class="knob-dial" id="knob-mode" onclick="rotateModeKnob()">
                     <div class="knob-pointer"></div>
                 </div>
-                <div style="font-size:11px; color:#ffcc00; margin-top:6px; font-weight:bold;" id="mode-label">MODE: MEM</div>
+                <div>
+                    <div style="font-size:10px; color:#aaa;">MODE 模式</div>
+                    <div style="font-size:12px; color:var(--lcd-yellow); font-weight:bold;" id="knob-mode-text">MEM</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-jog btn-start" onclick="handleCycleStart()">CYCLE<br>START</button>
+                <button class="btn-jog btn-estop" onclick="handleEStop()">E-STOP<br>緊急停止</button>
             </div>
         </div>
 
-        <div class="mop-right">
-            <!-- 數碼管 (刀具號碼) -->
-            <div class="digital-displays">
-                <div><span style="font-size:10px; color:#aaa;">刀庫刀號:</span> <span class="seven-seg">01</span></div>
-                <div><span style="font-size:10px; color:#aaa;">主軸刀號:</span> <span class="seven-seg">01</span></div>
-            </div>
-
-            <!-- JOG 軸向移動控制鍵盤區 -->
-            <div class="jog-grid">
-                <button class="jog-btn" onclick="jog('X', 1)">+X</button>
-                <button class="jog-btn" onclick="jog('Y', 1)">+Y</button>
-                <button class="jog-btn" onclick="jog('Z', 1)">+Z</button>
-                <button class="jog-btn jog-rapid" id="btn-rapid" onclick="toggleRapid()">RAPID</button>
-                <button class="jog-btn" onclick="jog('X', -1)">-X</button>
-                <button class="jog-btn" onclick="jog('Y', -1)">-Y</button>
-                <button class="jog-btn" onclick="jog('Z', -1)">-Z</button>
-                <button class="jog-btn" onclick="zeroReturnAll()">原點歸零</button>
-            </div>
-
-            <div class="key-switch">
-                <span>PROGRAM PROTECT (程式保護):</span>
-                <input type="checkbox" id="key-protect" checked> <label for="key-protect">LOCK (ON)</label>
-            </div>
+        <div class="jog-grid">
+            <button class="btn-jog" onclick="jogMove('X', 1)">+X</button>
+            <button class="btn-jog" onclick="jogMove('Y', 1)">+Y</button>
+            <button class="btn-jog" onclick="jogMove('Z', 1)">+Z</button>
+            <button class="btn-jog" style="background:#e65100" onclick="triggerRefZero()">原點復歸</button>
+            <button class="btn-jog" onclick="jogMove('X', -1)">-X</button>
+            <button class="btn-jog" onclick="jogMove('Y', -1)">-Y</button>
+            <button class="jog-btn btn-jog" onclick="jogMove('Z', -1)">-Z</button>
+            <button class="btn-jog" id="btn-rapid" onclick="toggleRapid()">快速寸動</button>
         </div>
     </div>
 </div>
 
 <script>
-    // 系統狀態
+    // --- 控制器核心數據結構 ---
     const modes = ['MEM', 'EDIT', 'MDI', 'JOG', 'REF'];
     let currentModeIdx = 0;
-    let currentView = 'pos';
-    let isRapid = false;
-    let inputBuffer = "";
+    
+    let state = {
+        mainPage: 'POS',  // POS, PROG, OFFSET, SYSTEM
+        subPage: 'ALL',   // POS: ABS, REL, ALL; OFFSET: TOOL, WORK
+        isOprt: false,    // 是否在 (OPRT) 選單層
+        buffer: '',
+        isRapid: false
+    };
 
-    // 座標數據
     let posData = {
         rel: { x: 0.000, y: 0.000, z: 0.000 },
         abs: { x: -120.412, y: 235.198, z: -130.760 },
         mach: { x: 200.410, y: 0.750, z: -130.760 }
     };
 
-    // 刀補數值
-    let toolOffsets = { H: -150.250, D: 10.000 };
+    let offsets = { H01: -150.250, D01: 10.000 };
+    let programCode = "O0001;\nG90 G54 G00 X0 Y0;\nM03 S1500;\nG43 H01 Z50.;\nM30;";
 
-    // 旋轉 MODE 選擇鈕
-    function rotateMode() {
-        currentModeIdx = (currentModeIdx + 1) % modes.length;
-        const mode = modes[currentModeIdx];
-        const angles = [0, 45, 90, 135, 180];
+    // --- 根據 FANUC 0i-MF 規範動態計算 12 顆 Softkey 標籤 ---
+    function getSoftkeyMenu() {
+        let labels = Array(12).fill("");
+
+        if (state.mainPage === 'POS') {
+            if (!state.isOprt) {
+                labels[0] = "ABS";
+                labels[1] = "REL";
+                labels[2] = "ALL";
+                labels[11] = "(OPRT)";
+            } else {
+                labels[0] = "PRESET"; // 相對座標清零
+                labels[1] = "EXEC";
+                labels[11] = "RETURN";
+            }
+        } 
+        else if (state.mainPage === 'PROG') {
+            if (!state.isOprt) {
+                labels[0] = "PRGRM";
+                labels[1] = "DIR";
+                labels[2] = "SEARCH";
+                labels[11] = "(OPRT)";
+            } else {
+                labels[0] = "CREATE"; // 新作檔案
+                labels[1] = "READ";   // 讀取
+                labels[2] = "DELETE";
+                labels[11] = "RETURN";
+            }
+        } 
+        else if (state.mainPage === 'OFFSET') {
+            if (!state.isOprt) {
+                labels[0] = "OFFSET"; // 刀長/半徑
+                labels[1] = "SETTING";
+                labels[2] = "WORK";   // 工件座標系
+                labels[11] = "(OPRT)";
+            } else {
+                labels[0] = "INPUT";  // 覆寫補正值
+                labels[1] = "+INPUT"; // 累加補正值
+                labels[11] = "RETURN";
+            }
+        }
+        return labels;
+    }
+
+    // 渲染 LCD 螢幕底部 12 Slots Softkey 標籤列
+    function renderSoftkeys() {
+        const bar = document.getElementById('softkey-bar');
+        bar.innerHTML = "";
+        const labels = getSoftkeyMenu();
         
-        document.getElementById('mode-knob').style.transform = `rotate(${angles[currentModeIdx]}deg)`;
-        document.getElementById('mode-label').innerText = `MODE: ${mode}`;
-        document.getElementById('screen-status-mode').innerText = `${mode} \u00A0 **** \u00A0 STMT`;
+        labels.forEach(lbl => {
+            const div = document.createElement('div');
+            div.className = 'lcd-sk-label';
+            div.innerText = lbl;
+            bar.appendChild(div);
+        });
     }
 
-    // 畫面分頁切換
-    function switchView(view) {
-        currentView = view;
-        document.getElementById('view-pos').style.display = view === 'pos' ? 'grid' : 'none';
-        document.getElementById('view-prog').style.display = view === 'prog' ? 'block' : 'none';
-        document.getElementById('view-offset').style.display = view === 'offset' ? 'block' : 'none';
+    // 渲染 LCD 主畫面 Viewport
+    function renderViewport() {
+        const vp = document.getElementById('lcd-main-viewport');
+        vp.innerHTML = "";
+
+        if (state.mainPage === 'POS') {
+            vp.innerHTML = `
+                <div class="pos-grid">
+                    <div>
+                        <div class="pos-title">[相對座標 RELATIVE]</div>
+                        <div class="pos-row"><span class="pos-axis">X</span><span class="pos-val">${posData.rel.x.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Y</span><span class="pos-val">${posData.rel.y.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Z</span><span class="pos-val">${posData.rel.z.toFixed(3)}</span></div>
+
+                        <div class="pos-title" style="margin-top:10px;">[絕對座標 ABSOLUTE]</div>
+                        <div class="pos-row"><span class="pos-axis">X</span><span class="pos-val">${posData.abs.x.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Y</span><span class="pos-val">${posData.abs.y.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Z</span><span class="pos-val">${posData.abs.z.toFixed(3)}</span></div>
+                    </div>
+                    <div>
+                        <div class="pos-title">[機械座標 MACHINE]</div>
+                        <div class="pos-row"><span class="pos-axis">X</span><span class="pos-val">${posData.mach.x.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Y</span><span class="pos-val">${posData.mach.y.toFixed(3)}</span></div>
+                        <div class="pos-row"><span class="pos-axis">Z</span><span class="pos-val">${posData.mach.z.toFixed(3)}</span></div>
+                    </div>
+                </div>
+            `;
+        } 
+        else if (state.mainPage === 'PROG') {
+            vp.innerHTML = `
+                <div style="color:var(--lcd-yellow); font-size:11px;">PROGRAM EDITOR (${modes[currentModeIdx]})</div>
+                <textarea class="code-editor" id="txt-prog" spellcheck="false" ${modes[currentModeIdx] !== 'EDIT' ? 'readonly' : ''}>${programCode}</textarea>
+            `;
+        } 
+        else if (state.mainPage === 'OFFSET') {
+            vp.innerHTML = `
+                <div style="color:var(--lcd-yellow); font-size:11px; margin-bottom:6px;">OFFSET / GEOMETRY (刀具補正)</div>
+                <table style="width:100%; font-size:12px; color:#fff; text-align:left;">
+                    <tr style="color:var(--lcd-cyan); border-bottom:1px solid #333;">
+                        <th>NO.</th><th>GEOM (H) 刀長</th><th>GEOM (D) 半徑</th>
+                    </tr>
+                    <tr>
+                        <td>01</td>
+                        <td>${offsets.H01.toFixed(3)}</td>
+                        <td>${offsets.D01.toFixed(3)}</td>
+                    </tr>
+                </table>
+            `;
+        }
     }
 
-    // 刷新畫面座標數值
-    function renderPos() {
-        document.getElementById('val-rel-x').innerText = posData.rel.x.toFixed(3);
-        document.getElementById('val-rel-y').innerText = posData.rel.y.toFixed(3);
-        document.getElementById('val-rel-z').innerText = posData.rel.z.toFixed(3);
+    // --- 實體按鍵與觸控邏輯 ---
 
-        document.getElementById('val-abs-x').innerText = posData.abs.x.toFixed(3);
-        document.getElementById('val-abs-y').innerText = posData.abs.y.toFixed(3);
-        document.getElementById('val-abs-z').innerText = posData.abs.z.toFixed(3);
+    // 點擊面板下 12 顆小黑鍵
+    function pressSoftkey(index) {
+        const labels = getSoftkeyMenu();
+        const clickedLabel = labels[index];
 
-        document.getElementById('val-mach-x').innerText = posData.mach.x.toFixed(3);
-        document.getElementById('val-mach-y').innerText = posData.mach.y.toFixed(3);
-        document.getElementById('val-mach-z').innerText = posData.mach.z.toFixed(3);
+        if (!clickedLabel) return;
+
+        if (clickedLabel === "(OPRT)") {
+            state.isOprt = true;
+        } else if (clickedLabel === "RETURN") {
+            state.isOprt = false;
+        } 
+        // POS 操作：相對座標預設歸零
+        else if (clickedLabel === "PRESET") {
+            posData.rel = { x: 0.000, y: 0.000, z: 0.000 };
+            alert("相對座標已成功歸零 (PRESET)");
+        } 
+        // PROG 操作：新建檔案
+        else if (clickedLabel === "CREATE") {
+            if (modes[currentModeIdx] !== 'EDIT') {
+                alert("新建或修改檔案請先將 MODE 切換至 EDIT 模式！");
+                return;
+            }
+            programCode = "O" + Math.floor(1000 + Math.random() * 9000) + ";\nM30;";
+            alert("已新建空白 NC 程式");
+        }
+
+        renderSoftkeys();
+        renderViewport();
     }
 
-    // JOG 點動與移動
-    function jog(axis, dir) {
-        const mode = modes[currentModeIdx];
-        if (mode !== 'JOG' && mode !== 'REF') {
-            alert("請先將 MODE 切換至 JOG 或 REF 模式！");
+    // MDI 主選單功能切換鍵
+    function switchMainPage(page) {
+        state.mainPage = page;
+        state.isOprt = false;
+        renderSoftkeys();
+        renderViewport();
+    }
+
+    // MODE 旋轉鈕切換
+    function rotateModeKnob() {
+        currentModeIdx = (currentModeIdx + 1) % modes.length;
+        const curMode = modes[currentModeIdx];
+        const angles = [0, 45, 90, 135, 180];
+
+        document.getElementById('knob-mode').style.transform = `rotate(${angles[currentModeIdx]}deg)`;
+        document.getElementById('knob-mode-text').innerText = curMode;
+        document.getElementById('lcd-mode-status').innerText = `${curMode} \u00A0 **** \u00A0 STMT`;
+        
+        renderViewport();
+    }
+
+    // JOG 寸動移動
+    function jogMove(axis, dir) {
+        const curMode = modes[currentModeIdx];
+        if (curMode !== 'JOG' && curMode !== 'REF') {
+            alert("請先將 MODE 旋鈕轉至 JOG 或 REF 模式！");
             return;
         }
 
-        let step = isRapid ? 10.0 : 1.0;
+        let step = state.isRapid ? 10.0 : 1.0;
         let a = axis.toLowerCase();
 
         posData.rel[a] += step * dir;
         posData.abs[a] += step * dir;
         posData.mach[a] += step * dir;
 
-        renderPos();
+        renderViewport();
     }
 
-    function toggleRapid() {
-        isRapid = !isRapid;
-        document.getElementById('btn-rapid').style.background = isRapid ? '#ff6d00' : '#e65100';
-    }
-
-    // 全軸機械歸零 / 相對座標歸零
-    function zeroReturnAll() {
+    // 原點歸零 (G28)
+    function triggerRefZero() {
         if (modes[currentModeIdx] !== 'REF') {
-            alert("請先將 MODE 轉鈕切換至 REF (原點復歸)！");
+            alert("原點復歸請先切換 MODE 至 REF 模式！");
             return;
         }
         posData.mach = { x: 0.000, y: 0.000, z: 0.000 };
-        renderPos();
-        alert("機械原點復歸完成 (G28)");
+        renderViewport();
+        alert("全軸已安全返回機械原點 (REF ZERO RETURN)");
     }
 
-    // 面板下 Softkeys 觸發動作
-    function triggerSoftkey(idx) {
-        if (idx === 1 || idx === 4) { // 相對座標歸零
-            posData.rel = { x: 0.000, y: 0.000, z: 0.000 };
-            renderPos();
-        } else if (idx === 5) { // 新建檔案
-            if (document.getElementById('key-protect').checked) {
-                alert("程式保護開關已開啟 (LOCK)，無法新建檔案！");
-                return;
-            }
-            document.getElementById('nc-editor').value = "O" + Math.floor(1000 + Math.random() * 9000) + ";\nM30;";
-            switchView('prog');
-        } else if (idx === 7 || idx === 8) { // 補正修改
-            switchView('offset');
-        }
+    function toggleRapid() {
+        state.isRapid = !state.isRapid;
+        document.getElementById('btn-rapid').style.background = state.isRapid ? '#ff6d00' : '#2a2d34';
     }
 
-    // MDI 鍵盤輸入 logic
-    function pressKey(key) {
-        if (key === 'CAN') {
-            inputBuffer = inputBuffer.slice(0, -1);
-        } else if (key === 'EOB') {
-            inputBuffer += ";";
+    // MDI 按鍵點擊
+    function pressKey(char) {
+        if (char === 'CAN') {
+            state.buffer = state.buffer.slice(0, -1);
+        } else if (char === 'EOB') {
+            state.buffer += ";";
         } else {
-            inputBuffer += key;
+            state.buffer += char;
         }
-        document.getElementById('input-buffer').innerText = inputBuffer;
+        document.getElementById('buf-text').innerText = state.buffer;
     }
 
+    // MDI INPUT 按鈕執行
     function pressInput() {
-        if (!inputBuffer) return;
+        if (!state.buffer) return;
 
-        // 判斷修改刀補
-        if (currentView === 'offset') {
-            let val = parseFloat(inputBuffer);
+        if (state.mainPage === 'OFFSET') {
+            let val = parseFloat(state.buffer);
             if (!isNaN(val)) {
-                if (inputBuffer.includes('H')) toolOffsets.H = val;
-                else toolOffsets.D = val;
-                document.getElementById('h-offset').innerText = toolOffsets.H.toFixed(3);
-                document.getElementById('d-offset').innerText = toolOffsets.D.toFixed(3);
+                if (state.buffer.includes('H')) offsets.H01 = val;
+                else offsets.D01 = val;
             }
-        } else if (currentView === 'prog') {
-            let editor = document.getElementById('nc-editor');
-            editor.value += "\n" + inputBuffer;
         }
-
-        inputBuffer = "";
-        document.getElementById('input-buffer').innerText = "";
+        state.buffer = "";
+        document.getElementById('buf-text').innerText = "";
+        renderViewport();
     }
 
-    // 啟動與急停
-    function cycleStart() {
+    function handleCycleStart() {
         if (modes[currentModeIdx] !== 'MEM') {
-            alert("自動執行請將 MODE 切換至 MEM 模式");
+            alert("自動執行請先切換至 MEM 模式");
             return;
         }
-        alert("AUTOMATIC EXECUTION STARTED (CYCLE START)");
+        alert("CYCLE START: 程式開始執行");
     }
 
-    function eStop() {
-        alert("EMERGENCY STOP (緊急停止已觸發)");
+    function handleEStop() {
+        alert("EMERGENCY STOP: 緊急停止已觸發");
     }
+
+    // 初始化
+    renderSoftkeys();
+    renderViewport();
 </script>
 
 </body>
